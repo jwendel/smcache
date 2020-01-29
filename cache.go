@@ -18,8 +18,8 @@ const debug = false
 // GSMCache represents a autocert cache that will store/retreive data from
 // GCP Secret Manager.
 type GSMCache struct {
-	// ProjectId is the GCP Project ID where the Secrets will be stored
-	ProjectId string
+	// ProjectID is the GCP Project ID where the Secrets will be stored
+	ProjectID string
 	// SecretPrefix is a string that will be put before the secret name.
 	// This is useful for for IAM access control and for grouping secrets
 	// by application.
@@ -37,7 +37,7 @@ func (smc *GSMCache) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
 	}
 
-	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectId, smc.SecretPrefix, key)
+	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectID, smc.SecretPrefix, key)
 	dlog("GET svKey: %v", svKey)
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
@@ -72,7 +72,7 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 	// If we get NotFound, we know to create the secret.
 	// Otherwise we'll have a list of SecretVersions to delete once the rest is complete.
 	svi := client.ListSecretVersions(context.Background(), &secretmanagerpb.ListSecretVersionsRequest{
-		Parent: fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectId, smc.SecretPrefix, key),
+		Parent: fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key),
 		// Should only need to get a few to delete.  Also hopefully they are returned in most-recent-first order
 		PageSize: 10,
 	})
@@ -140,7 +140,7 @@ func (smc *GSMCache) deleteOldSecretVersions(
 // createSecret will create the secret within the project.
 func (smc *GSMCache) createSecret(ctx context.Context, key string, client *secretmanager.Client) error {
 	createSecretReq := &secretmanagerpb.CreateSecretRequest{
-		Parent:   fmt.Sprintf("projects/%s", smc.ProjectId),
+		Parent:   fmt.Sprintf("projects/%s", smc.ProjectID),
 		SecretId: fmt.Sprintf("%s%s", smc.SecretPrefix, key),
 		Secret: &secretmanagerpb.Secret{
 			Replication: &secretmanagerpb.Replication{
@@ -160,7 +160,7 @@ func (smc *GSMCache) createSecret(ctx context.Context, key string, client *secre
 
 // addSecretVersion will store the data within the secret
 func (smc *GSMCache) addSecretVersion(ctx context.Context, key string, data []byte, client *secretmanager.Client) error {
-	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectId, smc.SecretPrefix, key)
+	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
 	req := &secretmanagerpb.AddSecretVersionRequest{
 		Parent: sKey,
@@ -184,7 +184,7 @@ func (smc *GSMCache) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
 
-	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectId, smc.SecretPrefix, key)
+	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
 	req := &secretmanagerpb.DeleteSecretRequest{
 		Name: sKey,
