@@ -13,8 +13,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const debug = false
-
 // GSMCache represents a autocert cache that will store/retreive data from
 // GCP Secret Manager.
 type GSMCache struct {
@@ -24,6 +22,8 @@ type GSMCache struct {
 	// This is useful for for IAM access control and for grouping secrets
 	// by application.
 	SecretPrefix string
+	// If true, will log some status messages to log.Prtinf().
+	DebugLogging bool
 }
 
 // Get returns a certificate data for the specified key.
@@ -31,19 +31,19 @@ type GSMCache struct {
 func (smc *GSMCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
 
-	dlog("Get called for: [%v]", key)
-	client, err := secretmanager.NewClient(ctx)
+	smc.dlog("Get called for: [%v]", key)
+	client, err := newSecretClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
 	}
 
 	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectID, smc.SecretPrefix, key)
-	dlog("GET svKey: %v", svKey)
+	smc.dlog("GET svKey: %v", svKey)
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: svKey,
 	}
-	resp, err := client.AccessSecretVersion(ctx, req)
+	resp, err := client.AccessSecretVersion(req)
 
 	if st := status.Convert(err); st != nil {
 		if st.Code() == codes.NotFound {
@@ -52,7 +52,7 @@ func (smc *GSMCache) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 
-	dlog("GET: Got result: %+v", resp.GetName())
+	smc.dlog("GET: Got result: %+v", resp.GetName())
 	return resp.GetPayload().GetData(), nil
 }
 
@@ -62,8 +62,8 @@ func (smc *GSMCache) Get(ctx context.Context, key string) ([]byte, error) {
 func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
 
-	dlog("Put called for: [%v]", key)
-	client, err := secretmanager.NewClient(ctx)
+	smc.dlog("Put called for: [%v]", key)
+	client, err := newSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -71,7 +71,7 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 	// Get a List of SecretVersions that already exist in this secret.
 	// If we get NotFound, we know to create the secret.
 	// Otherwise we'll have a list of SecretVersions to delete once the rest is complete.
-	svi := client.ListSecretVersions(context.Background(), &secretmanagerpb.ListSecretVersionsRequest{
+	svi := client.ListSecretVersions(&secretmanagerpb.ListSecretVersionsRequest{
 		Parent: fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key),
 		// Should only need to get a few to delete.  Also hopefully they are returned in most-recent-first order
 		PageSize: 10,
@@ -81,7 +81,7 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 	if st := status.Convert(err); st != nil {
 		if st.Code() == codes.NotFound {
 			// If the base Secret was NotFound, we attempt to create it
-			err := smc.createSecret(ctx, key, client)
+			err := smc.createSecret(key, client)
 			if err != nil {
 				// Secret creation failed, bail
 				return err
@@ -92,12 +92,12 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 		}
 	}
 
-	err = smc.addSecretVersion(ctx, key, data, client)
+	err = smc.addSecretVersion(key, data, client)
 	if err != nil {
 		return err
 	}
 
-	smc.deleteOldSecretVersions(ctx, key, client, sv, svi)
+	smc.deleteOldSecretVersions(key, client, sv, svi)
 	return nil
 }
 
@@ -105,8 +105,8 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 // This is a best effort operation and will not return any errors if there are problems,
 // but will log any problems (if debug logging is enabled).
 func (smc *GSMCache) deleteOldSecretVersions(
-	ctx context.Context,
-	key string, client *secretmanager.Client,
+	key string,
+	client secretClient,
 	sv *secretmanagerpb.SecretVersion,
 	svi *secretmanager.SecretVersionIterator) {
 
@@ -121,12 +121,12 @@ func (smc *GSMCache) deleteOldSecretVersions(
 			svr := &secretmanagerpb.DestroySecretVersionRequest{
 				Name: sv.GetName(),
 			}
-			_, err := client.DestroySecretVersion(ctx, svr)
+			_, err := client.DestroySecretVersion(svr)
 			if err != nil {
-				dlog("error deleting secret version: %v, got error %v", sv.GetName(), err)
+				smc.dlog("error deleting secret version: %v, got error %v", sv.GetName(), err)
 				return
 			}
-			dlog("Deleted secret %v", sv.GetName())
+			smc.dlog("Deleted secret %v", sv.GetName())
 		}
 		// Get the next SecretVersion to delete
 		var err error
@@ -138,7 +138,7 @@ func (smc *GSMCache) deleteOldSecretVersions(
 }
 
 // createSecret will create the secret within the project.
-func (smc *GSMCache) createSecret(ctx context.Context, key string, client *secretmanager.Client) error {
+func (smc *GSMCache) createSecret(key string, client secretClient) error {
 	createSecretReq := &secretmanagerpb.CreateSecretRequest{
 		Parent:   fmt.Sprintf("projects/%s", smc.ProjectID),
 		SecretId: fmt.Sprintf("%s%s", smc.SecretPrefix, key),
@@ -151,7 +151,7 @@ func (smc *GSMCache) createSecret(ctx context.Context, key string, client *secre
 		},
 	}
 
-	_, err := client.CreateSecret(ctx, createSecretReq)
+	_, err := client.CreateSecret(createSecretReq)
 	if err != nil {
 		return fmt.Errorf("Failed to create Secret. %w", err)
 	}
@@ -159,7 +159,7 @@ func (smc *GSMCache) createSecret(ctx context.Context, key string, client *secre
 }
 
 // addSecretVersion will store the data within the secret
-func (smc *GSMCache) addSecretVersion(ctx context.Context, key string, data []byte, client *secretmanager.Client) error {
+func (smc *GSMCache) addSecretVersion(key string, data []byte, client secretClient) error {
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
 	req := &secretmanagerpb.AddSecretVersionRequest{
@@ -169,7 +169,7 @@ func (smc *GSMCache) addSecretVersion(ctx context.Context, key string, data []by
 		},
 	}
 
-	_, err := client.AddSecretVersion(ctx, req)
+	_, err := client.AddSecretVersion(req)
 	return err
 }
 
@@ -178,8 +178,8 @@ func (smc *GSMCache) addSecretVersion(ctx context.Context, key string, data []by
 func (smc *GSMCache) Delete(ctx context.Context, key string) error {
 	key = sanitize(key)
 
-	dlog("Delete called for: [%v]", key)
-	client, err := secretmanager.NewClient(ctx)
+	smc.dlog("Delete called for: [%v]", key)
+	client, err := newSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -190,7 +190,7 @@ func (smc *GSMCache) Delete(ctx context.Context, key string) error {
 		Name: sKey,
 	}
 
-	err = client.DeleteSecret(ctx, req)
+	err = client.DeleteSecret(req)
 	if st := status.Convert(err); st != nil {
 		// No-such-key, we return nil
 		if st.Code() == codes.NotFound {
@@ -203,8 +203,8 @@ func (smc *GSMCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func dlog(format string, v ...interface{}) {
-	if debug {
+func (smc *GSMCache) dlog(format string, v ...interface{}) {
+	if smc.DebugLogging {
 		log.Printf(format, v...)
 	}
 }
