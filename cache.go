@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// GSMCache represents a autocert cache that will store/retreive data from
-// GCP Secret Manager.
-type GSMCache struct {
+// GSMCacheConfig represents a autocert cache that will store/retreive data from
+// GCP Secret Manager.  TODO, reword me
+type GSMCacheConfig struct {
 	// ProjectID is the GCP Project ID where the Secrets will be stored
 	ProjectID string
 	// SecretPrefix is a string that will be put before the secret name.
@@ -26,13 +26,28 @@ type GSMCache struct {
 	DebugLogging bool
 }
 
+// GSMCache should be private.  TODO
+type GSMCache struct {
+	GSMCacheConfig
+	cf clientFactory
+}
+
+// NewGSMCache creates a new gsmcache TODO
+// TODO: Change this to return an interface
+func NewGSMCache(config GSMCacheConfig) *GSMCache {
+	return &GSMCache{
+		GSMCacheConfig: config,
+		cf:             &secretClientFactoryImpl{},
+	}
+}
+
 // Get returns a certificate data for the specified key.
 // If there's no such key, Get returns ErrCacheMiss.
 func (smc *GSMCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
 
 	smc.dlog("Get called for: [%v]", key)
-	client, err := newSecretClient(ctx)
+	client, err := smc.cf.newSecretClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -63,7 +78,7 @@ func (smc *GSMCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
 
 	smc.dlog("Put called for: [%v]", key)
-	client, err := newSecretClient(ctx)
+	client, err := smc.cf.newSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -179,7 +194,7 @@ func (smc *GSMCache) Delete(ctx context.Context, key string) error {
 	key = sanitize(key)
 
 	smc.dlog("Delete called for: [%v]", key)
-	client, err := newSecretClient(ctx)
+	client, err := smc.cf.newSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}

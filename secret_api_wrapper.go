@@ -8,6 +8,12 @@ import (
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
+type clientFactory interface {
+	newSecretClient(ctx context.Context) (secretClient, error)
+}
+
+// secretClient is a wrapper around the secretmanager APIs that are used by gsmcache.
+// It is entirely for the purpose of being able to mock these for testing.
 type secretClient interface {
 	AccessSecretVersion(req *secretmanagerpb.AccessSecretVersionRequest) (*secretmanagerpb.AccessSecretVersionResponse, error)
 	ListSecretVersions(req *secretmanagerpb.ListSecretVersionsRequest) *secretmanager.SecretVersionIterator
@@ -22,7 +28,9 @@ type secretClientImpl struct {
 	ctx    context.Context
 }
 
-func newSecretClient(ctx context.Context) (secretClient, error) {
+type secretClientFactoryImpl struct{}
+
+func (*secretClientFactoryImpl) newSecretClient(ctx context.Context) (secretClient, error) {
 	c, err := secretmanager.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
