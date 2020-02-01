@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const debug = false
+
 func TestGet_errResp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -20,7 +22,7 @@ func TestGet_errResp(t *testing.T) {
 	m := mocks.NewMocksecretClient(ctrl)
 	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, fmt.Errorf("Some random error"))
 
-	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: true}, m)
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
 	data, err := cache.Get(context.Background(), "d")
 
 	assert.EqualError(t, err, "Some random error")
@@ -34,7 +36,7 @@ func TestGet_notFound(t *testing.T) {
 	m := mocks.NewMocksecretClient(ctrl)
 	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, status.Error(codes.NotFound, "fake not found"))
 
-	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: true}, m)
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
 	data, err := cache.Get(context.Background(), "d")
 
 	assert.EqualError(t, err, autocert.ErrCacheMiss.Error())
