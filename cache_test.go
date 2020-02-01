@@ -2,37 +2,56 @@ package gsmcache
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/jwendel/gsmcache/mocks"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func TestGet(t *testing.T) {
+func TestGet_errResp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	cache := newGSMCacheWithMock(GSMCacheConfig{ProjectID: "a", SecretPrefix: "b", DebugLogging: false}, ctrl)
-	data, err := cache.Get(context.Background(), "d")
-	if err != nil {
-		t.Error(err)
-	} else {
-		t.Log(data)
-	}
+	m := mocks.NewMocksecretClient(ctrl)
+	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, fmt.Errorf("Some random error"))
 
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: true}, m)
+	data, err := cache.Get(context.Background(), "d")
+
+	assert.EqualError(t, err, "Some random error")
+	assert.Nil(t, data)
 }
 
-func newGSMCacheWithMock(config GSMCacheConfig, ctrl *gomock.Controller) *GSMCache {
-	return &GSMCache{
-		GSMCacheConfig: config,
-		cf:             &mockSecretClientFactoryImpl{ctrl: ctrl},
+func TestGet_notFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMocksecretClient(ctrl)
+	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, status.Error(codes.NotFound, "fake not found"))
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: true}, m)
+	data, err := cache.Get(context.Background(), "d")
+
+	assert.EqualError(t, err, autocert.ErrCacheMiss.Error())
+	assert.Nil(t, data)
+}
+
+func newCacheWithMockGrpc(config Config, m *mocks.MocksecretClient) *gsmCache {
+	return &gsmCache{
+		Config: config,
+		cf:     &mockSecretClientFactoryImpl{mock: m},
 	}
 }
 
 type mockSecretClientFactoryImpl struct {
-	ctrl *gomock.Controller
+	mock *mocks.MocksecretClient
 }
 
 func (m *mockSecretClientFactoryImpl) newSecretClient(ctx context.Context) (secretClient, error) {
-	return mocks.NewMocksecretClient(m.ctrl), nil
+	return m.mock, nil
 }
