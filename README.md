@@ -1,20 +1,22 @@
-GSMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache) within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
+SMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache) within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
 
-NOTE: This is a work-in-progress, API is NOT stable. It currently works with one of my sites, there are no unit tests yet and I haven't finished fleshing out any corner cases.
+**This is not an official Google product.**
+
+NOTE: This is a work-in-progress, API is NOT stable. It seems to work, but not all corner-cases have been tested yet.
 
 # How To Use
 
 ```go
 
 import (
-	"github.com/jwendel/gsmcache"
+	"github.com/google/smcache"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 ...
 
 m := &autocert.Manager{
-    Cache:      &gsmcache.GSMCache{ProjectId: "my-project-id", SecretPrefix: "test-"},
+    Cache:      &smcache.SMCache{ProjectId: "my-project-id", SecretPrefix: "test-"},
     Prompt:     autocert.AcceptTOS,
     HostPolicy: autocert.HostWhitelist("example.com", "www.example.com"),
 }
@@ -28,7 +30,8 @@ panic(s.ListenAndServeTLS("", ""))
 
 # Dev TODO List
 
-- Tests
-  - Validate empty SecretPrefix works.
-- Flag for debug logging.
-- Flag to not delete SecretVersion on update.
+- [ ] Tests
+  - [X] mocks created, basic test works.
+  - [ ] Validate unset SecretPrefix works.
+- [X] Flag for debug logging.
+- [ ] Flag to not delete SecretVersion on update.
