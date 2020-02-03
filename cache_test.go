@@ -23,6 +23,7 @@ import (
 	"github.com/google/smcache/mocks"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/acme/autocert"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -57,8 +58,32 @@ func TestGet_notFound(t *testing.T) {
 	assert.Nil(t, data)
 }
 
-func newCacheWithMockGrpc(config Config, m *mocks.MocksecretClient) *gsmCache {
-	return &gsmCache{
+func TestGet_happyPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	m := mocks.NewMocksecretClient(ctrl)
+	m.EXPECT().AccessSecretVersion(gomock.Eq(
+		&secretmanagerpb.AccessSecretVersionRequest{
+			Name: "projects/a/secrets/bd/versions/latest",
+		})).Return(
+		&secretmanagerpb.AccessSecretVersionResponse{
+			Name:    "bd",
+			Payload: &secretmanagerpb.SecretPayload{Data: secret},
+		}, nil)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
+	result, err := cache.Get(context.Background(), "d")
+
+	assert.Nil(t, err)
+	assert.Equal(t, result, secret)
+}
+
+// helper functions for tests
+
+func newCacheWithMockGrpc(config Config, m *mocks.MocksecretClient) *smCache {
+	return &smCache{
 		Config: config,
 		cf:     &mockSecretClientFactoryImpl{mock: m},
 	}

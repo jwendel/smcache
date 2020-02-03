@@ -57,7 +57,7 @@ func NewSMCache(config Config) autocert.Cache {
 
 // Get returns a certificate data for the specified key.
 // If there's no such key, Get returns ErrCacheMiss.
-func (smc *smcache) Get(ctx context.Context, key string) ([]byte, error) {
+func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
 
 	smc.dlog("Get called for: [%v]", key)
@@ -88,7 +88,7 @@ func (smc *smcache) Get(ctx context.Context, key string) ([]byte, error) {
 // Put stores the data in the cache under the specified key.
 // Underlying implementations may use any data storage format,
 // as long as the reverse operation, Get, results in the original data.
-func (smc *smcache) Put(ctx context.Context, key string, data []byte) error {
+func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
 
 	smc.dlog("Put called for: [%v]", key)
@@ -133,7 +133,7 @@ func (smc *smcache) Put(ctx context.Context, key string, data []byte) error {
 // deleteOldSecretVersions will delete sv and all other SecretVersions within the svi.
 // This is a best effort operation and will not return any errors if there are problems,
 // but will log any problems (if debug logging is enabled).
-func (smc *smcache) deleteOldSecretVersions(
+func (smc *smCache) deleteOldSecretVersions(
 	key string,
 	client secretClient,
 	sv *secretmanagerpb.SecretVersion,
@@ -167,7 +167,7 @@ func (smc *smcache) deleteOldSecretVersions(
 }
 
 // createSecret will create the secret within the project.
-func (smc *smcache) createSecret(key string, client secretClient) error {
+func (smc *smCache) createSecret(key string, client secretClient) error {
 	createSecretReq := &secretmanagerpb.CreateSecretRequest{
 		Parent:   fmt.Sprintf("projects/%s", smc.ProjectID),
 		SecretId: fmt.Sprintf("%s%s", smc.SecretPrefix, key),
@@ -188,7 +188,7 @@ func (smc *smcache) createSecret(key string, client secretClient) error {
 }
 
 // addSecretVersion will store the data within the secret
-func (smc *smcache) addSecretVersion(key string, data []byte, client secretClient) error {
+func (smc *smCache) addSecretVersion(key string, data []byte, client secretClient) error {
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
 	req := &secretmanagerpb.AddSecretVersionRequest{
@@ -204,7 +204,7 @@ func (smc *smcache) addSecretVersion(key string, data []byte, client secretClien
 
 // Delete removes a certificate data from the cache under the specified key.
 // If there's no such key in the cache, Delete returns nil.
-func (smc *smcache) Delete(ctx context.Context, key string) error {
+func (smc *smCache) Delete(ctx context.Context, key string) error {
 	key = sanitize(key)
 
 	smc.dlog("Delete called for: [%v]", key)
@@ -232,7 +232,7 @@ func (smc *smcache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (smc *smcache) dlog(format string, v ...interface{}) {
+func (smc *smCache) dlog(format string, v ...interface{}) {
 	if smc.DebugLogging {
 		log.Printf(format, v...)
 	}
