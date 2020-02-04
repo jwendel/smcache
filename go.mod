@@ -1,4 +1,4 @@
-module github.com/google/smcache
+module github.com/jwendel/smcache
 
 go 1.13
 

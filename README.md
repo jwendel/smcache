@@ -32,6 +32,9 @@ panic(s.ListenAndServeTLS("", ""))
 
 - [ ] Tests
   - [X] mocks created, basic test works.
-  - [ ] Validate unset SecretPrefix works.
+  - [X] Validate unset SecretPrefix works.
+  - [X] Get tests
+  - [ ] Put tests
+  - [ ] Delete tests
 - [X] Flag for debug logging.
 - [ ] Flag to not delete SecretVersion on update.
