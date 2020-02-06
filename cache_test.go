@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
 	"github.com/golang/mock/gomock"
 	"github.com/jwendel/smcache/mocks"
 	"github.com/stretchr/testify/assert"
@@ -80,6 +81,28 @@ func TestGet_happyPath(t *testing.T) {
 	assert.Equal(t, result, secret)
 }
 
+func TestGet_happyPath_sanatizeKey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	m := mocks.NewMocksecretClient(ctrl)
+	m.EXPECT().AccessSecretVersion(gomock.Eq(
+		&secretmanagerpb.AccessSecretVersionRequest{
+			Name: "projects/a!@#$_^&*()-/secrets/b_________-_d___________/versions/latest",
+		})).Return(
+		&secretmanagerpb.AccessSecretVersionResponse{
+			Name:    "bd",
+			Payload: &secretmanagerpb.SecretPayload{Data: secret},
+		}, nil)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a!@#$_^&*()-", SecretPrefix: `b.)(*&^$#@-_`, DebugLogging: debug}, m) //
+	result, err := cache.Get(context.Background(), "d!@#$$%^&*()")
+
+	assert.Nil(t, err)
+	assert.Equal(t, result, secret)
+}
+
 func TestGet_unsetPrefix(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -115,13 +138,30 @@ func TestGet_clientError(t *testing.T) {
 	assert.Nil(t, result)
 }
 
+func TestPut(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	m := mocks.NewMocksecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent: "",
+		})).Return(
+		&secretmanager.SecretVersionIterator{}) // HOW DO I MOCK U?
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.Nil(t, err)
+}
+
 // helper functions for tests
 
 func newCacheWithMockGrpc(config Config, m *mocks.MocksecretClient) *smCache {
-	return &smCache{
-		Config: config,
-		cf:     &mockSecretClientFactoryImpl{mock: m},
-	}
+	c := NewSMCache(config).(*smCache)
+	c.cf = &mockSecretClientFactoryImpl{mock: m}
+	return c
 }
 
 type mockSecretClientFactoryImpl struct {
@@ -133,10 +173,9 @@ func (m *mockSecretClientFactoryImpl) newSecretClient(ctx context.Context) (secr
 }
 
 func newCacheWithErrorMockGrpc(config Config, m *mocks.MocksecretClient) *smCache {
-	return &smCache{
-		Config: config,
-		cf:     &mockErrorSecretClientFactoryImpl{mock: m},
-	}
+	c := NewSMCache(config).(*smCache)
+	c.cf = &mockErrorSecretClientFactoryImpl{mock: m}
+	return c
 }
 
 type mockErrorSecretClientFactoryImpl struct {

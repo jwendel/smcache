@@ -49,6 +49,7 @@ type smCache struct {
 // NewSMCache creates a new smcache TODO
 // TODO: Change this to return an interface
 func NewSMCache(config Config) autocert.Cache {
+	config.SecretPrefix = sanitize(config.SecretPrefix)
 	return &smCache{
 		Config: config,
 		cf:     &secretClientFactoryImpl{},
@@ -241,7 +242,7 @@ func (smc *smCache) dlog(format string, v ...interface{}) {
 // Secret Manager URLs are a bit picky about the characters that can be in them.
 // This regex restricts the chars in the key passed in by autocert.
 // NOTE: any changes to this regex will be a breaking change.
-var allowedCharacters = regexp.MustCompile("[^a-zA-Z0-9-_]+")
+var allowedCharacters = regexp.MustCompile("[^a-zA-Z0-9-_]")
 
 // Replace any non-URL safe characters with underscores.
 func sanitize(s string) string {
