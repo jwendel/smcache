@@ -20,7 +20,7 @@ import (
 	"log"
 	"regexp"
 
-	"github.com/jwendel/smcache/api"
+	api "github.com/jwendel/smcache/internal"
 	"golang.org/x/crypto/acme/autocert"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 	"google.golang.org/grpc/codes"

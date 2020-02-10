@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/jwendel/smcache/api"
-	apimocks "github.com/jwendel/smcache/api/mock"
+	api "github.com/jwendel/smcache/internal"
+	apimocks "github.com/jwendel/smcache/internal/mock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/acme/autocert"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
@@ -134,7 +134,7 @@ func TestGet_clientError(t *testing.T) {
 	cache := newCacheWithErrorMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
 	result, err := cache.Get(context.Background(), "d")
 
-	assert.EqualError(t, err, "Failed to setup client: problem creating client")
+	assert.EqualError(t, err, "failed to setup client: problem creating client")
 	assert.Nil(t, result)
 }
 

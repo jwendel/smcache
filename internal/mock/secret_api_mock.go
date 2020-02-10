@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	mocks "github.com/jwendel/smcache/api"
+	mocks "github.com/jwendel/smcache/internal"
 	secretmanager "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
