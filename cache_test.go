@@ -149,7 +149,7 @@ func TestPut(t *testing.T) {
 			Parent:   "projects/a/secrets/d",
 			PageSize: 10,
 		})).Return(
-		&slFake{})
+		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: "a", State: secretmanagerpb.SecretVersion_ENABLED}}})
 	m.EXPECT().AddSecretVersion(gomock.Any()).Return(nil, nil)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
@@ -160,12 +160,23 @@ func TestPut(t *testing.T) {
 
 // helper functions for tests
 
-type slFake struct {
+// Iterator fakes
+
+type sliFake struct {
+	secrets []*secretmanagerpb.SecretVersion
 }
 
-func (sl *slFake) Next() (*secretmanagerpb.SecretVersion, error) {
+func (sl *sliFake) Next() (*secretmanagerpb.SecretVersion, error) {
+	if len(sl.secrets) > 0 {
+		s := sl.secrets[0]
+		sl.secrets = sl.secrets[1:]
+		return s, nil
+	}
+
 	return nil, nil
 }
+
+// GRPC mocks
 
 func newCacheWithMockGrpc(config Config, m *apimocks.MockSecretClient) *smCache {
 	c := NewSMCache(config).(*smCache)
