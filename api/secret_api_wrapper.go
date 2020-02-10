@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package smcache
+package api
 
 import (
 	"context"
@@ -22,19 +22,23 @@ import (
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
-type clientFactory interface {
-	newSecretClient(ctx context.Context) (secretClient, error)
+type ClientFactory interface {
+	NewSecretClient(ctx context.Context) (SecretClient, error)
 }
 
-// secretClient is a wrapper around the secretmanager APIs that are used by smcache.
+// SecretClient is a wrapper around the secretmanager APIs that are used by smcache.
 // It is entirely for the purpose of being able to mock these for testing.
-type secretClient interface {
+type SecretClient interface {
 	AccessSecretVersion(req *secretmanagerpb.AccessSecretVersionRequest) (*secretmanagerpb.AccessSecretVersionResponse, error)
-	ListSecretVersions(req *secretmanagerpb.ListSecretVersionsRequest) *secretmanager.SecretVersionIterator
+	ListSecretVersions(req *secretmanagerpb.ListSecretVersionsRequest) SecretListIterator
 	DestroySecretVersion(req *secretmanagerpb.DestroySecretVersionRequest) (*secretmanagerpb.SecretVersion, error)
 	CreateSecret(req *secretmanagerpb.CreateSecretRequest) (*secretmanagerpb.Secret, error)
 	AddSecretVersion(req *secretmanagerpb.AddSecretVersionRequest) (*secretmanagerpb.SecretVersion, error)
 	DeleteSecret(req *secretmanagerpb.DeleteSecretRequest) error
+}
+
+type SecretListIterator interface {
+	Next() (*secretmanagerpb.SecretVersion, error)
 }
 
 type secretClientImpl struct {
@@ -42,9 +46,9 @@ type secretClientImpl struct {
 	ctx    context.Context
 }
 
-type secretClientFactoryImpl struct{}
+type SecretClientFactoryImpl struct{}
 
-func (*secretClientFactoryImpl) newSecretClient(ctx context.Context) (secretClient, error) {
+func (*SecretClientFactoryImpl) NewSecretClient(ctx context.Context) (SecretClient, error) {
 	c, err := secretmanager.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
@@ -56,7 +60,7 @@ func (*secretClientFactoryImpl) newSecretClient(ctx context.Context) (secretClie
 func (sc *secretClientImpl) AccessSecretVersion(req *secretmanagerpb.AccessSecretVersionRequest) (*secretmanagerpb.AccessSecretVersionResponse, error) {
 	return sc.client.AccessSecretVersion(sc.ctx, req)
 }
-func (sc *secretClientImpl) ListSecretVersions(req *secretmanagerpb.ListSecretVersionsRequest) *secretmanager.SecretVersionIterator {
+func (sc *secretClientImpl) ListSecretVersions(req *secretmanagerpb.ListSecretVersionsRequest) SecretListIterator {
 	return sc.client.ListSecretVersions(sc.ctx, req)
 }
 func (sc *secretClientImpl) DestroySecretVersion(req *secretmanagerpb.DestroySecretVersionRequest) (*secretmanagerpb.SecretVersion, error) {

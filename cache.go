@@ -20,7 +20,7 @@ import (
 	"log"
 	"regexp"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
+	"github.com/jwendel/smcache/api"
 	"golang.org/x/crypto/acme/autocert"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 	"google.golang.org/grpc/codes"
@@ -43,7 +43,7 @@ type Config struct {
 // smCache should be private.  TODO
 type smCache struct {
 	Config
-	cf clientFactory
+	cf api.ClientFactory
 }
 
 // NewSMCache creates a new smcache TODO
@@ -52,7 +52,7 @@ func NewSMCache(config Config) autocert.Cache {
 	config.SecretPrefix = sanitize(config.SecretPrefix)
 	return &smCache{
 		Config: config,
-		cf:     &secretClientFactoryImpl{},
+		cf:     &api.SecretClientFactoryImpl{},
 	}
 }
 
@@ -62,7 +62,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
 
 	smc.dlog("Get called for: [%v]", key)
-	client, err := smc.cf.newSecretClient(ctx)
+	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -93,7 +93,7 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
 
 	smc.dlog("Put called for: [%v]", key)
-	client, err := smc.cf.newSecretClient(ctx)
+	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
@@ -136,9 +136,9 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 // but will log any problems (if debug logging is enabled).
 func (smc *smCache) deleteOldSecretVersions(
 	key string,
-	client secretClient,
+	client api.SecretClient,
 	sv *secretmanagerpb.SecretVersion,
-	svi *secretmanager.SecretVersionIterator) {
+	svi api.SecretListIterator) {
 
 	for {
 		if sv == nil {
@@ -168,7 +168,7 @@ func (smc *smCache) deleteOldSecretVersions(
 }
 
 // createSecret will create the secret within the project.
-func (smc *smCache) createSecret(key string, client secretClient) error {
+func (smc *smCache) createSecret(key string, client api.SecretClient) error {
 	createSecretReq := &secretmanagerpb.CreateSecretRequest{
 		Parent:   fmt.Sprintf("projects/%s", smc.ProjectID),
 		SecretId: fmt.Sprintf("%s%s", smc.SecretPrefix, key),
@@ -189,7 +189,7 @@ func (smc *smCache) createSecret(key string, client secretClient) error {
 }
 
 // addSecretVersion will store the data within the secret
-func (smc *smCache) addSecretVersion(key string, data []byte, client secretClient) error {
+func (smc *smCache) addSecretVersion(key string, data []byte, client api.SecretClient) error {
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
 	req := &secretmanagerpb.AddSecretVersionRequest{
@@ -209,7 +209,7 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 	key = sanitize(key)
 
 	smc.dlog("Delete called for: [%v]", key)
-	client, err := smc.cf.newSecretClient(ctx)
+	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("Failed to setup client: %w", err)
 	}
