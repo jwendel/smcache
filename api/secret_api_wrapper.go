@@ -51,7 +51,7 @@ type SecretClientFactoryImpl struct{}
 func (*SecretClientFactoryImpl) NewSecretClient(ctx context.Context) (SecretClient, error) {
 	c, err := secretmanager.NewClient(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to setup client: %w", err)
+		return nil, fmt.Errorf("failed to setup client: %w", err)
 	}
 
 	return &secretClientImpl{client: c, ctx: ctx}, nil

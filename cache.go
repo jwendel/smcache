@@ -64,7 +64,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	smc.dlog("Get called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to setup client: %w", err)
+		return nil, fmt.Errorf("failed to setup client: %w", err)
 	}
 
 	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectID, smc.SecretPrefix, key)
@@ -95,7 +95,7 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	smc.dlog("Put called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to setup client: %w", err)
+		return fmt.Errorf("failed to setup client: %w", err)
 	}
 
 	// Get a List of SecretVersions that already exist in this secret.
@@ -111,7 +111,7 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	if st := status.Convert(err); st != nil {
 		if st.Code() == codes.NotFound {
 			// If the base Secret was NotFound, we attempt to create it
-			err := smc.createSecret(key, client)
+			err = smc.createSecret(key, client)
 			if err != nil {
 				// Secret creation failed, bail
 				return err
@@ -153,7 +153,7 @@ func (smc *smCache) deleteOldSecretVersions(
 			}
 			_, err := client.DestroySecretVersion(svr)
 			if err != nil {
-				smc.dlog("error deleting secret version: %v, got error %v", sv.GetName(), err)
+				smc.dlog("Error deleting secret version: %v, got error %v", sv.GetName(), err)
 				return
 			}
 			smc.dlog("Deleted secret %v", sv.GetName())
@@ -183,7 +183,7 @@ func (smc *smCache) createSecret(key string, client api.SecretClient) error {
 
 	_, err := client.CreateSecret(createSecretReq)
 	if err != nil {
-		return fmt.Errorf("Failed to create Secret. %w", err)
+		return fmt.Errorf("failed to create Secret. %w", err)
 	}
 	return nil
 }
@@ -211,7 +211,7 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 	smc.dlog("Delete called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to setup client: %w", err)
+		return fmt.Errorf("failed to setup client: %w", err)
 	}
 
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
@@ -227,7 +227,7 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 			return nil
 		}
 		// Some other problem happened while trying to delete, return the error
-		return fmt.Errorf("Problem while deleting secret [%v]. %w", sKey, err)
+		return fmt.Errorf("problem while deleting secret [%v]. %w", sKey, err)
 	}
 
 	return nil
