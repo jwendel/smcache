@@ -138,19 +138,51 @@ func TestGet_clientError(t *testing.T) {
 	assert.Nil(t, result)
 }
 
-func TestPut(t *testing.T) {
+func TestPut_happyPath_noSecretVersions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
 	m := apimocks.NewMockSecretClient(ctrl)
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
-			Parent:   "projects/a/secrets/d",
+			Parent:   secretPath,
 			PageSize: 10,
 		})).Return(
-		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: "a", State: secretmanagerpb.SecretVersion_ENABLED}}})
-	m.EXPECT().AddSecretVersion(gomock.Any()).Return(nil, nil)
+		&sliFake{})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.Nil(t, err)
+}
+
+func TestPut_happyPath_oneSV(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
+	activeSV := secretPath + "/versions/4"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: activeSV, State: secretmanagerpb.SecretVersion_ENABLED}}})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+	m.EXPECT().DestroySecretVersion(gomock.Eq(&secretmanagerpb.DestroySecretVersionRequest{
+		Name: activeSV,
+	})).Return(nil, nil)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
 	err := cache.Put(context.Background(), "d", secret)
@@ -169,6 +201,7 @@ type sliFake struct {
 func (sl *sliFake) Next() (*secretmanagerpb.SecretVersion, error) {
 	if len(sl.secrets) > 0 {
 		s := sl.secrets[0]
+		sl.secrets[0] = nil
 		sl.secrets = sl.secrets[1:]
 		return s, nil
 	}
