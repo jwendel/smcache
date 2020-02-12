@@ -66,6 +66,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup client: %w", err)
 	}
+	defer client.Close()
 
 	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectID, smc.SecretPrefix, key)
 	smc.dlog("GET svKey: %v", svKey)
@@ -97,6 +98,7 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup client: %w", err)
 	}
+	defer client.Close()
 
 	// Get a List of SecretVersions that already exist in this secret.
 	// If we get NotFound, we know to create the secret.
@@ -213,6 +215,7 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup client: %w", err)
 	}
+	defer client.Close()
 
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 

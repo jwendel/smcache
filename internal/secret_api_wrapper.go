@@ -35,6 +35,7 @@ type SecretClient interface {
 	CreateSecret(req *secretmanagerpb.CreateSecretRequest) (*secretmanagerpb.Secret, error)
 	AddSecretVersion(req *secretmanagerpb.AddSecretVersionRequest) (*secretmanagerpb.SecretVersion, error)
 	DeleteSecret(req *secretmanagerpb.DeleteSecretRequest) error
+	Close() error
 }
 
 type SecretListIterator interface {
@@ -74,4 +75,8 @@ func (sc *secretClientImpl) AddSecretVersion(req *secretmanagerpb.AddSecretVersi
 }
 func (sc *secretClientImpl) DeleteSecret(req *secretmanagerpb.DeleteSecretRequest) error {
 	return sc.client.DeleteSecret(sc.ctx, req)
+}
+
+func (sc *secretClientImpl) Close() error {
+	return sc.client.Close()
 }

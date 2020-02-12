@@ -37,6 +37,7 @@ func TestGet_errResp(t *testing.T) {
 
 	m := apimocks.NewMockSecretClient(ctrl)
 	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, fmt.Errorf("Some random error"))
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
 	data, err := cache.Get(context.Background(), "d")
@@ -51,6 +52,7 @@ func TestGet_notFound(t *testing.T) {
 
 	m := apimocks.NewMockSecretClient(ctrl)
 	m.EXPECT().AccessSecretVersion(gomock.Any()).Return(nil, status.Error(codes.NotFound, "fake not found"))
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
 	data, err := cache.Get(context.Background(), "d")
@@ -73,6 +75,7 @@ func TestGet_happyPath(t *testing.T) {
 			Name:    "bd",
 			Payload: &secretmanagerpb.SecretPayload{Data: secret},
 		}, nil)
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", SecretPrefix: "b", DebugLogging: debug}, m)
 	result, err := cache.Get(context.Background(), "d")
@@ -95,6 +98,7 @@ func TestGet_happyPath_sanatizeKey(t *testing.T) {
 			Name:    "bd",
 			Payload: &secretmanagerpb.SecretPayload{Data: secret},
 		}, nil)
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a!@#$_^&*()-", SecretPrefix: `b.)(*&^$#@-_`, DebugLogging: debug}, m) //
 	result, err := cache.Get(context.Background(), "d!@#$$%^&*()")
@@ -117,6 +121,7 @@ func TestGet_unsetPrefix(t *testing.T) {
 			Name:    "d",
 			Payload: &secretmanagerpb.SecretPayload{Data: secret},
 		}, nil)
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
 	result, err := cache.Get(context.Background(), "d")
@@ -155,6 +160,7 @@ func TestPut_happyPath_noSecretVersions(t *testing.T) {
 		Parent:  secretPath,
 		Payload: &secretmanagerpb.SecretPayload{Data: secret},
 	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
 	err := cache.Put(context.Background(), "d", secret)
@@ -183,6 +189,7 @@ func TestPut_happyPath_oneSV(t *testing.T) {
 	m.EXPECT().DestroySecretVersion(gomock.Eq(&secretmanagerpb.DestroySecretVersionRequest{
 		Name: activeSV,
 	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
 
 	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
 	err := cache.Put(context.Background(), "d", secret)

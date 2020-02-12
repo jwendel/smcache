@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	mocks "github.com/jwendel/smcache/internal"
+	api "github.com/jwendel/smcache/internal"
 	secretmanager "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
@@ -37,10 +37,10 @@ func (m *MockClientFactory) EXPECT() *MockClientFactoryMockRecorder {
 }
 
 // NewSecretClient mocks base method
-func (m *MockClientFactory) NewSecretClient(ctx context.Context) (mocks.SecretClient, error) {
+func (m *MockClientFactory) NewSecretClient(ctx context.Context) (api.SecretClient, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewSecretClient", ctx)
-	ret0, _ := ret[0].(mocks.SecretClient)
+	ret0, _ := ret[0].(api.SecretClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -90,10 +90,10 @@ func (mr *MockSecretClientMockRecorder) AccessSecretVersion(req interface{}) *go
 }
 
 // ListSecretVersions mocks base method
-func (m *MockSecretClient) ListSecretVersions(req *secretmanager.ListSecretVersionsRequest) mocks.SecretListIterator {
+func (m *MockSecretClient) ListSecretVersions(req *secretmanager.ListSecretVersionsRequest) api.SecretListIterator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListSecretVersions", req)
-	ret0, _ := ret[0].(mocks.SecretListIterator)
+	ret0, _ := ret[0].(api.SecretListIterator)
 	return ret0
 }
 
@@ -160,6 +160,20 @@ func (m *MockSecretClient) DeleteSecret(req *secretmanager.DeleteSecretRequest) 
 func (mr *MockSecretClientMockRecorder) DeleteSecret(req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretClient)(nil).DeleteSecret), req)
+}
+
+// Close mocks base method
+func (m *MockSecretClient) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close
+func (mr *MockSecretClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSecretClient)(nil).Close))
 }
 
 // MockSecretListIterator is a mock of SecretListIterator interface
