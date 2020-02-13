@@ -12,7 +12,7 @@ NOTE: This is a work-in-progress, API is NOT stable. It seems to work, but not a
 
 ```go
 import (
-	"github.com/google/smcache"
+	"github.com/jwendel/smcache"
 	"golang.org/x/crypto/acme/autocert"
 )
 
