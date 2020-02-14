@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	api "github.com/jwendel/smcache/internal"
-	apimocks "github.com/jwendel/smcache/internal/mock"
+	"github.com/jwendel/smcache/internal/api"
+	apimocks "github.com/jwendel/smcache/internal/api/mock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/acme/autocert"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"

@@ -8,7 +8,7 @@ SMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypt
 
 NOTE: This is a work-in-progress, API is NOT stable. It seems to work, but not all corner-cases have been tested yet.
 
-# How To Use
+# Simple Example
 
 ```go
 import (

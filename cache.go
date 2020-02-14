@@ -20,34 +20,42 @@ import (
 	"log"
 	"regexp"
 
-	api "github.com/jwendel/smcache/internal"
+	"github.com/jwendel/smcache/internal/api"
 	"golang.org/x/crypto/acme/autocert"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// Config represents a autocert cache that will store/retreive data from
-// GCP Secret Manager.  TODO, reword me
+// Config is passed into NewSMCache as a way to configure how SMCache will behave
+// through it's lifespan.
 type Config struct {
-	// ProjectID is the GCP Project ID where the Secrets will be stored
+	// ProjectID is the GCP Project ID where the Secrets will be stored.
+	// This is the "Project ID" as seen in Google Cloud console.
+	// Example ID: "my-project-1234".
+	// This field is Required.
 	ProjectID string
+
 	// SecretPrefix is a string that will be put before the secret name.
-	// This is useful for for IAM access control and for grouping secrets
-	// by application.
+	// This is useful for for IAM access control. As well, it's useful
+	// for grouping secrets by application.
+	// Optional, defaults to no-prefix.
 	SecretPrefix string
+
 	// If true, will log some status messages to log.Prtinf().
+	// Optional, defaults to false.
 	DebugLogging bool
 }
 
-// smCache should be private.  TODO
+// smCache is the struct that will implement the autocert.Cache interface.
+// It stores the needed data to interact with the GCP SecretManager.
 type smCache struct {
 	Config
 	cf api.ClientFactory
 }
 
-// NewSMCache creates a new smcache TODO
-// TODO: Change this to return an interface
+// NewSMCache creates a struct that implements the `autocert.Cache` interface.
+// It uses the Config passed in to drive the behavior of this client.
 func NewSMCache(config Config) autocert.Cache {
 	config.SecretPrefix = sanitize(config.SecretPrefix)
 	return &smCache{
