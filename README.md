@@ -5,8 +5,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/jwendel/smcache)](https://goreportcard.com/report/github.com/jwendel/smcache)
 
 SMCache is a Go library to store certificates from Let's Encrypt in GCP Secret Manager.
-
-SMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache) within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
+It is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache)
+within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) 
+that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
 
 > This is not an official Google product.
 
