@@ -42,7 +42,16 @@ type Config struct {
 	// Optional, defaults to no-prefix.
 	SecretPrefix string
 
-	// If true, will log some status messages to log.Prtinf().
+	// If true, smcache will not delete old SecretVersions of Certificates.
+	// If false, when autoert stores a certificate that is already in Secret Manager,
+	// smcache will attempt to delete all old versions of that certificate.
+	// Optional, defaults to false.
+	KeepOldCertificates bool
+
+	// DebugLogging controls if logging is enabled.
+	// If true, smcache will log some status messages to log.Prtinf().
+	// This will not logany sensitive data, it should just be key
+	// names and paths.
 	// Optional, defaults to false.
 	DebugLogging bool
 }
@@ -69,7 +78,7 @@ func NewSMCache(config Config) autocert.Cache {
 func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
 
-	smc.dlog("Get called for: [%v]", key)
+	smc.log("Get called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup client: %w", err)
@@ -77,7 +86,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	defer client.Close()
 
 	svKey := fmt.Sprintf("projects/%s/secrets/%s%s/versions/latest", smc.ProjectID, smc.SecretPrefix, key)
-	smc.dlog("GET svKey: %v", svKey)
+	smc.log("GET svKey: %v", svKey)
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: svKey,
@@ -91,7 +100,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 
-	smc.dlog("GET: Got result: %+v", resp.GetName())
+	smc.log("GET: Got result: %+v", resp.GetName())
 	return resp.GetPayload().GetData(), nil
 }
 
@@ -101,7 +110,7 @@ func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
 
-	smc.dlog("Put called for: [%v]", key)
+	smc.log("Put called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup client: %w", err)
@@ -137,7 +146,9 @@ func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 		return err
 	}
 
-	smc.deleteOldSecretVersions(key, client, sv, svi)
+	if !smc.KeepOldCertificates {
+		smc.deleteOldSecretVersions(key, client, sv, svi)
+	}
 	return nil
 }
 
@@ -163,10 +174,10 @@ func (smc *smCache) deleteOldSecretVersions(
 			}
 			_, err := client.DestroySecretVersion(svr)
 			if err != nil {
-				smc.dlog("Error deleting secret version: %v, got error %v", sv.GetName(), err)
+				smc.log("Error deleting secret version: %v, got error %v", sv.GetName(), err)
 				return
 			}
-			smc.dlog("Deleted secret %v", sv.GetName())
+			smc.log("Deleted secret %v", sv.GetName())
 		}
 		// Get the next SecretVersion to delete
 		var err error
@@ -218,7 +229,7 @@ func (smc *smCache) addSecretVersion(key string, data []byte, client api.SecretC
 func (smc *smCache) Delete(ctx context.Context, key string) error {
 	key = sanitize(key)
 
-	smc.dlog("Delete called for: [%v]", key)
+	smc.log("Delete called for: [%v]", key)
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup client: %w", err)
@@ -244,7 +255,8 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (smc *smCache) dlog(format string, v ...interface{}) {
+// log to basic logger if DebugLogging is enabled.
+func (smc *smCache) log(format string, v ...interface{}) {
 	if smc.DebugLogging {
 		log.Printf(format, v...)
 	}

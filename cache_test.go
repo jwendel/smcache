@@ -197,6 +197,57 @@ func TestPut_happyPath_oneSV(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestPut_happyPath_KeepOldCertificates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
+	activeSV := secretPath + "/versions/4"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: activeSV, State: secretmanagerpb.SecretVersion_ENABLED}}})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug, KeepOldCertificates: true}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.Nil(t, err)
+}
+
+func TestPut_clientError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := apimocks.NewMockSecretClient(ctrl)
+
+	secret := []byte("secret data!")
+	cache := newCacheWithErrorMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "keykey", secret)
+
+	assert.EqualError(t, err, "failed to setup client: problem creating client")
+}
+
+func TestDelete_clientError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := apimocks.NewMockSecretClient(ctrl)
+
+	cache := newCacheWithErrorMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Delete(context.Background(), "Key")
+
+	assert.EqualError(t, err, "failed to setup client: problem creating client")
+}
+
 // helper functions for tests
 
 // Iterator fakes

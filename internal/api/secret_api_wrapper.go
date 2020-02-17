@@ -22,6 +22,8 @@ import (
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 )
 
+// ClientFactory is used to create SecretClient, which is the GRPC Secret Client
+// in normal use, but can be mocked for tests.
 type ClientFactory interface {
 	NewSecretClient(ctx context.Context) (SecretClient, error)
 }
@@ -38,6 +40,7 @@ type SecretClient interface {
 	Close() error
 }
 
+// SecretListIterator is an interface for the GRPC secret manager response from ListSecretVersions.
 type SecretListIterator interface {
 	Next() (*secretmanagerpb.SecretVersion, error)
 }
@@ -47,8 +50,10 @@ type secretClientImpl struct {
 	ctx    context.Context
 }
 
+// SecretClientFactoryImpl implements ClientFactory for the real GRPC client.
 type SecretClientFactoryImpl struct{}
 
+// NewSecretClient creates a GRPC NewClient for secretmanager.
 func (*SecretClientFactoryImpl) NewSecretClient(ctx context.Context) (SecretClient, error) {
 	c, err := secretmanager.NewClient(ctx)
 	if err != nil {

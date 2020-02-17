@@ -57,4 +57,4 @@ Bonus Security: if you're paranoid about this resource getting access to other s
   - [ ] Put tests (started)
   - [ ] Delete tests
 - [X] Flag for debug logging.
-- [ ] Flag to not delete SecretVersion on update.
+- [X] Flag to not delete SecretVersion on update.
