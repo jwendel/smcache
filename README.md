@@ -4,13 +4,11 @@
 [![Build Status](https://api.travis-ci.org/jwendel/smcache.svg?branch=master&label=Windows+and+Linux+and+macOS+build "Build Status")](https://travis-ci.org/jwendel/smcache)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jwendel/smcache)](https://goreportcard.com/report/github.com/jwendel/smcache)
 
-Go library to store certificates from Let's Encrypt in GCP Secret Manager.
+SMCache is a Go library to store certificates from Let's Encrypt in GCP Secret Manager.
 
 SMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache) within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
 
-**This is not an official Google product.**
-
-NOTE: This is a work-in-progress, API is NOT stable. It seems to work, but not all corner-cases have been tested yet.
+> This is not an official Google product.
 
 # Simple Example
 
@@ -51,6 +49,10 @@ Bonus Security: if you're paranoid about this resource getting access to other s
 4) click `Add Condition`, then set a name and description for it.
 5) For Contidition Type, select `Resource` -> `Name`, Operator: `Starts With`, and set it to whatever value you want, such as "`test-`".
    * this prefix likely should be the same as the `SecretPrefix` you set on the `smcache.Config`.
+
+## Other notes
+
+* Requires Go >= 1.13.0 (due to use of `fmt.Errorf`)
 
 # Dev TODO List
 

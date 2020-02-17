@@ -22,8 +22,4 @@
 //
 // For more details, see the README.md, which is published at
 // https://github.com/jwendel/smcache
-//
-// Links:
-//  https://godoc.org/golang.org/x/crypto/acme/autocert#Cache
-//  https://cloud.google.com/secret-manager/docs
 package smcache
