@@ -175,9 +175,9 @@ func (smc *smCache) deleteOldSecretVersions(
 			_, err := client.DestroySecretVersion(svr)
 			if err != nil {
 				smc.log("Error deleting secret version: %v, got error %v", sv.GetName(), err)
-				return
+			} else {
+				smc.log("Deleted secret %v", sv.GetName())
 			}
-			smc.log("Deleted secret %v", sv.GetName())
 		}
 		// Get the next SecretVersion to delete
 		var err error

@@ -197,6 +197,196 @@ func TestPut_happyPath_oneSV(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// Make sure the looping delete is tested (deleteOldSecretVersions)
+func TestPut_happyPath_5_SVs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
+	activeSV := secretPath + "/versions/"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFake{secrets: []*secretmanagerpb.SecretVersion{
+			{Name: activeSV + "1", State: secretmanagerpb.SecretVersion_ENABLED},
+			{Name: activeSV + "2", State: secretmanagerpb.SecretVersion_DESTROYED},
+			{Name: activeSV + "3", State: secretmanagerpb.SecretVersion_ENABLED},
+			{Name: activeSV + "4", State: secretmanagerpb.SecretVersion_DISABLED},
+			{Name: activeSV + "5", State: secretmanagerpb.SecretVersion_ENABLED},
+		}})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+	m.EXPECT().DestroySecretVersion(gomock.Eq(&secretmanagerpb.DestroySecretVersionRequest{
+		Name: activeSV + "1",
+	})).Return(nil, nil)
+	m.EXPECT().DestroySecretVersion(gomock.Eq(&secretmanagerpb.DestroySecretVersionRequest{
+		Name: activeSV + "3",
+	})).Return(nil, fmt.Errorf("Fake error"))
+	m.EXPECT().DestroySecretVersion(gomock.Eq(&secretmanagerpb.DestroySecretVersionRequest{
+		Name: activeSV + "5",
+	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.Nil(t, err)
+}
+
+// Make sure not to delete old ones if it's a list of
+// multiple when KeepOldCertificates is enabled.
+func TestPut_happyPath_5_SVs_keepSVs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
+	activeSV := secretPath + "/versions/"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFake{secrets: []*secretmanagerpb.SecretVersion{
+			{Name: activeSV + "1", State: secretmanagerpb.SecretVersion_ENABLED},
+			{Name: activeSV + "2", State: secretmanagerpb.SecretVersion_DESTROYED},
+			{Name: activeSV + "3", State: secretmanagerpb.SecretVersion_ENABLED},
+			{Name: activeSV + "4", State: secretmanagerpb.SecretVersion_DISABLED},
+			{Name: activeSV + "5", State: secretmanagerpb.SecretVersion_ENABLED},
+		}})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", KeepOldCertificates: true, DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.Nil(t, err)
+}
+
+func TestPut_happyPath_NewSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/projId/secrets/secrId"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFakeNotFound{})
+	m.EXPECT().CreateSecret(&secretmanagerpb.CreateSecretRequest{
+		Parent:   "projects/projId",
+		SecretId: "secrId",
+		Secret: &secretmanagerpb.Secret{
+			Replication: &secretmanagerpb.Replication{
+				Replication: &secretmanagerpb.Replication_Automatic_{
+					Automatic: &secretmanagerpb.Replication_Automatic{},
+				},
+			},
+		},
+	}).Return(nil, nil)
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, nil)
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "projId", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "secrId", secret)
+
+	assert.Nil(t, err)
+}
+
+func TestPut_NewSecret_createError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/projId/secrets/secrId"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFakeNotFound{})
+	m.EXPECT().CreateSecret(&secretmanagerpb.CreateSecretRequest{
+		Parent:   "projects/projId",
+		SecretId: "secrId",
+		Secret: &secretmanagerpb.Secret{
+			Replication: &secretmanagerpb.Replication{
+				Replication: &secretmanagerpb.Replication_Automatic_{
+					Automatic: &secretmanagerpb.Replication_Automatic{},
+				},
+			},
+		},
+	}).Return(nil, fmt.Errorf("create error"))
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "projId", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "secrId", secret)
+
+	assert.EqualError(t, err, "failed to create Secret. create error")
+}
+
+func TestPut_listError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/projId/secrets/secrId"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFakeError{})
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "projId", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "secrId", secret)
+
+	assert.EqualError(t, err, "rpc error: code = DeadlineExceeded desc = deadline exceeded resp")
+}
+
+func TestPut_errorOnSecretVersionCreate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	secret := []byte("secret data!")
+	secretPath := "projects/a/secrets/d"
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().ListSecretVersions(gomock.Eq(
+		&secretmanagerpb.ListSecretVersionsRequest{
+			Parent:   secretPath,
+			PageSize: 10,
+		})).Return(
+		&sliFake{})
+	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
+		Parent:  secretPath,
+		Payload: &secretmanagerpb.SecretPayload{Data: secret},
+	})).Return(nil, fmt.Errorf("sv create error"))
+	m.EXPECT().Close().Times(1)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Put(context.Background(), "d", secret)
+
+	assert.EqualError(t, err, "sv create error")
+}
+
 func TestPut_happyPath_KeepOldCertificates(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -265,6 +455,18 @@ func (sl *sliFake) Next() (*secretmanagerpb.SecretVersion, error) {
 	}
 
 	return nil, nil
+}
+
+type sliFakeNotFound struct{}
+
+func (sl *sliFakeNotFound) Next() (*secretmanagerpb.SecretVersion, error) {
+	return nil, status.Error(codes.NotFound, "not found resp")
+}
+
+type sliFakeError struct{}
+
+func (sl *sliFakeError) Next() (*secretmanagerpb.SecretVersion, error) {
+	return nil, status.Error(codes.DeadlineExceeded, "deadline exceeded resp")
 }
 
 // GRPC mocks
