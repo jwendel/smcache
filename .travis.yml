@@ -25,4 +25,4 @@ script:
 
 matrix:
   allow_failures:
-    - go: tip
+    - go: master
