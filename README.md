@@ -1,5 +1,9 @@
 # Overview
 
+[![GoDoc](https://godoc.org/github.com/jwendel/smcache?status.svg)](https://godoc.org/github.com/jwendel/smcache)
+[![Build Status](https://api.travis-ci.org/jwendel/smcache.svg?branch=master&label=Windows+and+Linux+and+macOS+build "Build Status")](https://travis-ci.org/jwendel/smcache)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jwendel/smcache)](https://goreportcard.com/report/github.com/jwendel/smcache)
+
 Go library to store certificates from Let's Encrypt in GCP Secret Manager.
 
 SMCache is an implementation of the [Cache](https://godoc.org/golang.org/x/crypto/acme/autocert#Cache) within [acme autocert](https://godoc.org/golang.org/x/crypto/acme/autocert) that will store data within [Google Cloud's Secret Manager](https://cloud.google.com/secret-manager/docs).
