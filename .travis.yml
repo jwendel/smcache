@@ -2,7 +2,7 @@ language: go
 
 go:
   - 1.13.x
-  - tip
+  - master
 
 env:
   global:
@@ -10,7 +10,6 @@ env:
 
 arch:
   - amd64
-  - arm64
 
 os:
   - linux
@@ -22,6 +21,7 @@ script:
   - go mod verify
   - go test ./...
   - go test -race ./...
+  - go build
 
 matrix:
   allow_failures:
