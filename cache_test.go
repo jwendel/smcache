@@ -438,6 +438,55 @@ func TestDelete_clientError(t *testing.T) {
 	assert.EqualError(t, err, "failed to setup client: problem creating client")
 }
 
+func TestDelete_normalPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().Close().Times(1)
+	m.EXPECT().DeleteSecret(gomock.Eq(&secretmanagerpb.DeleteSecretRequest{
+		Name: "projects/a/secrets/Keyyy",
+	})).Return(nil)
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Delete(context.Background(), "Keyyy")
+
+	assert.Nil(t, err)
+}
+
+func TestDelete_noSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().Close().Times(1)
+	m.EXPECT().DeleteSecret(gomock.Eq(&secretmanagerpb.DeleteSecretRequest{
+		Name: "projects/a/secrets/Keyyy",
+	})).Return(status.Error(codes.NotFound, "not found resp"))
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Delete(context.Background(), "Keyyy")
+
+	assert.Nil(t, err)
+}
+
+func TestDelete_internalError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := apimocks.NewMockSecretClient(ctrl)
+	m.EXPECT().Close().Times(1)
+	m.EXPECT().DeleteSecret(gomock.Eq(&secretmanagerpb.DeleteSecretRequest{
+		Name: "projects/a/secrets/Keyyy",
+	})).Return(status.Error(codes.Internal, "not found resp"))
+
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a", DebugLogging: debug}, m)
+	err := cache.Delete(context.Background(), "Keyyy")
+
+	assert.EqualError(t, err, "problem while deleting secret [projects/a/secrets/Keyyy]. "+
+		"rpc error: code = Internal desc = not found resp")
+}
+
 // helper functions for tests
 
 // Iterator fakes

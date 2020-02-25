@@ -57,11 +57,12 @@ Bonus Security: if you're paranoid about this resource getting access to other s
 
 # Dev TODO List
 
-- [ ] Tests
+- [X] Tests
   - [X] mocks created, basic test works.
   - [X] Validate unset SecretPrefix works.
   - [X] Get tests
-  - [ ] Put tests (started)
-  - [ ] Delete tests
+  - [X] Put tests
+  - [X] Delete tests
 - [X] Flag for debug logging.
 - [X] Flag to not delete SecretVersion on update.
+- [ ] Finish README docs.
