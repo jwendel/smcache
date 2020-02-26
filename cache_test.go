@@ -153,7 +153,7 @@ func TestPut_happyPath_noSecretVersions(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{})
 	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
@@ -179,7 +179,7 @@ func TestPut_happyPath_oneSV(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: activeSV, State: secretmanagerpb.SecretVersion_ENABLED}}})
 	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
@@ -209,7 +209,7 @@ func TestPut_happyPath_5_SVs(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{secrets: []*secretmanagerpb.SecretVersion{
 			{Name: activeSV + "1", State: secretmanagerpb.SecretVersion_ENABLED},
@@ -252,7 +252,7 @@ func TestPut_happyPath_5_SVs_keepSVs(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{secrets: []*secretmanagerpb.SecretVersion{
 			{Name: activeSV + "1", State: secretmanagerpb.SecretVersion_ENABLED},
@@ -283,7 +283,7 @@ func TestPut_happyPath_NewSecret(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFakeNotFound{})
 	m.EXPECT().CreateSecret(&secretmanagerpb.CreateSecretRequest{
@@ -319,7 +319,7 @@ func TestPut_NewSecret_createError(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFakeNotFound{})
 	m.EXPECT().CreateSecret(&secretmanagerpb.CreateSecretRequest{
@@ -351,7 +351,7 @@ func TestPut_listError(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFakeError{})
 	m.EXPECT().Close().Times(1)
@@ -372,7 +372,7 @@ func TestPut_errorOnSecretVersionCreate(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{})
 	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{
@@ -398,7 +398,7 @@ func TestPut_happyPath_KeepOldCertificates(t *testing.T) {
 	m.EXPECT().ListSecretVersions(gomock.Eq(
 		&secretmanagerpb.ListSecretVersionsRequest{
 			Parent:   secretPath,
-			PageSize: 10,
+			PageSize: listPageSize,
 		})).Return(
 		&sliFake{secrets: []*secretmanagerpb.SecretVersion{{Name: activeSV, State: secretmanagerpb.SecretVersion_ENABLED}}})
 	m.EXPECT().AddSecretVersion(gomock.Eq(&secretmanagerpb.AddSecretVersionRequest{

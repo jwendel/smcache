@@ -2,7 +2,8 @@ language: go
 
 go:
   - 1.13.x
-  - master
+  - 1.14.x
+# - master
 
 env:
   global:

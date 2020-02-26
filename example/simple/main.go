@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to get: %v", err)
 	}
+
 	log.Printf("got result!:  %+v", string(res))
 
 	// Put a new SecretVersion, to demo a /versions/2 being created
@@ -54,6 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to get: %v", err)
 	}
+
 	log.Printf("got result!:  %+v", string(res))
 
 	// Leaving the below commented out so you can see the Secret's in GCP's dashboard.
