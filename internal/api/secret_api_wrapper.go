@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	sm "cloud.google.com/go/secretmanager/apiv1beta1"
-	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	sm "cloud.google.com/go/secretmanager/apiv1"
+	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 // ClientFactory is used to create SecretClient, which is the GRPC Secret Client

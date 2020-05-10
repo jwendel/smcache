@@ -17,6 +17,7 @@ package smcache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -24,7 +25,7 @@ import (
 	apimocks "github.com/jwendel/smcache/internal/api/mock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/acme/autocert"
-	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -84,7 +85,7 @@ func TestGet_happyPath(t *testing.T) {
 	assert.Equal(t, result, secret)
 }
 
-func TestGet_happyPath_sanatizeKey(t *testing.T) {
+func TestGet_happyPath_sanitizeKey(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -100,7 +101,7 @@ func TestGet_happyPath_sanatizeKey(t *testing.T) {
 		}, nil)
 	m.EXPECT().Close().Times(1)
 
-	cache := newCacheWithMockGrpc(Config{ProjectID: "a!@#$_^&*()-", SecretPrefix: `b.)(*&^$#@-_`, DebugLogging: debug}, m) //
+	cache := newCacheWithMockGrpc(Config{ProjectID: "a!@#$_^&*()-", SecretPrefix: `b.)(*&^$#@-_`, DebugLogging: debug}, m)
 	result, err := cache.Get(context.Background(), "d!@#$$%^&*()")
 
 	assert.Nil(t, err)
@@ -197,7 +198,7 @@ func TestPut_happyPath_oneSV(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-// Make sure the looping delete is tested (deleteOldSecretVersions)
+// Make sure the looping delete is tested (deleteOldSecretVersions).
 func TestPut_happyPath_5_SVs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -487,6 +488,20 @@ func TestDelete_internalError(t *testing.T) {
 		"rpc error: code = Internal desc = not found resp")
 }
 
+func TestSanitize(t *testing.T) {
+	// test filtering out bad chars
+	assert.Equal(t, sanitize("www.example.com"), "www_example_com")
+	assert.Equal(t, sanitize("aj...1-_9z98&!@()31238c.ocm"), "aj___1-_9z98_____31238c_ocm")
+
+	// test length limit
+	assert.Equal(t, sanitize(""), "")
+	assert.Equal(t, sanitize("b"), "b")
+	assert.Equal(t, sanitize(strings.Repeat("a", 20)), strings.Repeat("a", 20))
+	assert.Equal(t, sanitize(strings.Repeat("a", 255)), strings.Repeat("a", 255))
+	assert.Equal(t, sanitize(strings.Repeat("a", 256)), strings.Repeat("a", 255))
+	assert.Equal(t, sanitize(strings.Repeat("a.b.c", 100)), strings.Repeat("a_b_c", 51))
+}
+
 // helper functions for tests
 
 // Iterator fakes
@@ -500,6 +515,7 @@ func (sl *sliFake) Next() (*secretmanagerpb.SecretVersion, error) {
 		s := sl.secrets[0]
 		sl.secrets[0] = nil
 		sl.secrets = sl.secrets[1:]
+
 		return s, nil
 	}
 
@@ -523,6 +539,7 @@ func (sl *sliFakeError) Next() (*secretmanagerpb.SecretVersion, error) {
 func newCacheWithMockGrpc(config Config, m *apimocks.MockSecretClient) *smCache {
 	c := NewSMCache(config).(*smCache)
 	c.cf = &mockSecretClientFactoryImpl{mock: m}
+
 	return c
 }
 
@@ -537,6 +554,7 @@ func (m *mockSecretClientFactoryImpl) NewSecretClient(ctx context.Context) (api.
 func newCacheWithErrorMockGrpc(config Config, m *apimocks.MockSecretClient) *smCache {
 	c := NewSMCache(config).(*smCache)
 	c.cf = &mockErrorSecretClientFactoryImpl{mock: m}
+
 	return c
 }
 

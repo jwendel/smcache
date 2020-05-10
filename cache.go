@@ -22,7 +22,7 @@ import (
 
 	"github.com/jwendel/smcache/internal/api"
 	"golang.org/x/crypto/acme/autocert"
-	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -217,7 +217,7 @@ func (smc *smCache) createSecret(key string, client api.SecretClient) error {
 	return nil
 }
 
-// addSecretVersion will store the data within the secret
+// addSecretVersion will store the data within the secret.
 func (smc *smCache) addSecretVersion(key string, data []byte, client api.SecretClient) error {
 	sKey := fmt.Sprintf("projects/%s/secrets/%s%s", smc.ProjectID, smc.SecretPrefix, key)
 
@@ -273,10 +273,21 @@ func (smc *smCache) logf(format string, v ...interface{}) {
 
 // Secret Manager URLs are a bit picky about the characters that can be in them.
 // This regex restricts the chars in the key passed in by autocert.
-// NOTE: any changes to this regex will be a breaking change.
-var allowedCharacters = regexp.MustCompile("[^a-zA-Z0-9-_]")
+//
+// NOTE: any changes to this regex will be a breaking change, as it could change
+// the name of the secret this library tries to get/put/delete.
+var /*const*/ allowedCharacters = regexp.MustCompile("[^a-zA-Z0-9-_]")
 
-// Replace any non-URL safe characters with underscores.
+// Replace any non-URL safe characters with underscores. Also shorten to 255 chars.
+//
+// From: https://cloud.google.com/secret-manager/docs/reference/rest/v1/projects.secrets/create
+// "A secret ID is a string with a maximum length of 255 characters and can contain uppercase
+// and lowercase letters, numerals, and the hyphen (-) and underscore (_) characters".
 func sanitize(s string) string {
-	return allowedCharacters.ReplaceAllString(s, "_")
+	s = allowedCharacters.ReplaceAllString(s, "_")
+	if len(s) > 255 {
+		s = s[:255]
+	}
+
+	return s
 }

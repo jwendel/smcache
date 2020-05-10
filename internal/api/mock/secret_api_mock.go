@@ -24,7 +24,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/jwendel/smcache/internal/api"
-	secretmanager "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretmanager "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 // MockClientFactory is a mock of ClientFactory interface
