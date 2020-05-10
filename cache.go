@@ -267,7 +267,7 @@ func (smc *smCache) Delete(ctx context.Context, key string) error {
 // logf to basic logger if DebugLogging is enabled.
 func (smc *smCache) logf(format string, v ...interface{}) {
 	if smc.DebugLogging {
-		log.Printf(format, v...)
+		log.Printf("smcache: "+format, v...)
 	}
 }
 

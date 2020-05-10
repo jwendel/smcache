@@ -37,7 +37,7 @@ func main() {
 
 ## Permission setup in GCP
 
-SMCache requires [admin access](https://cloud.google.com/secret-manager/docs/access-control) to the secret Manager API to function properly. This is configure in the IAM policy for a resource. 
+SMCache requires [admin access](https://cloud.google.com/secret-manager/docs/access-control) to the Secret Manager API to function properly. This is configure in the IAM policy for a resource. 
 
 Example of enabling this API for Compute Engine:
 
@@ -48,21 +48,17 @@ Example of enabling this API for Compute Engine:
 Bonus Security: if you're paranoid about this resource getting access to other secrets, you can set a condition on the Role we just added.
 
 4) click `Add Condition`, then set a name and description for it.
-5) For Contidition Type, select `Resource` -> `Name`, Operator: `Starts With`, and set it to whatever value you want, such as "`test-`".
-   * this prefix likely should be the same as the `SecretPrefix` you set on the `smcache.Config`.
+5) For Conditional Type, select `Resource` -> `Name`, Operator: `Starts With`, and set it to whatever value you want, such as "`test-`".
+   * Note: this prefix should be the same as the `SecretPrefix` you set on the `smcache.Config`.
+
+## Demos
+
+There are 2 demos checked into this repo under example/.
+
+* [Autocert+Http Example](https://github.com/jwendel/smcache/tree/master/example/autocert) - shows how to use this library with Autocert and the Go HTTP std server.
+* [Simple Example](https://github.com/jwendel/smcache/tree/master/example/simple) - demos how this library interacts with GCP's Secret Manager.
 
 ## Other notes
 
 * Requires Go >= 1.13.0 (due to use of `fmt.Errorf`)
-
-# Dev TODO List
-
-- [X] Tests
-  - [X] mocks created, basic test works.
-  - [X] Validate unset SecretPrefix works.
-  - [X] Get tests
-  - [X] Put tests
-  - [X] Delete tests
-- [X] Flag for debug logging.
-- [X] Flag to not delete SecretVersion on update.
-- [ ] Finish README docs.
+* 
