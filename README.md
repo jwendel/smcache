@@ -61,4 +61,3 @@ There are 2 demos checked into this repo under example/.
 ## Other notes
 
 * Requires Go >= 1.13.0 (due to use of `fmt.Errorf`)
-* 
