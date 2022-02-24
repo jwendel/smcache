@@ -78,7 +78,7 @@ func NewSMCache(config Config) autocert.Cache {
 // If there's no such key, Get returns ErrCacheMiss.
 func (smc *smCache) Get(ctx context.Context, key string) ([]byte, error) {
 	key = sanitize(key)
-	smc.logf("Get called for: [%v]", key)
+	smc.logf("GET called for: [%v]", key)
 
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
@@ -115,7 +115,7 @@ const listPageSize = 10
 // as long as the reverse operation, Get, results in the original data.
 func (smc *smCache) Put(ctx context.Context, key string, data []byte) error {
 	key = sanitize(key)
-	smc.logf("Put called for: [%v]", key)
+	smc.logf("PUT called for: [%v]", key)
 
 	client, err := smc.cf.NewSecretClient(ctx)
 	if err != nil {
